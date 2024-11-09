@@ -1,5 +1,5 @@
 import base64
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 from constants import browser_list
 
 class BrowserActions:
@@ -7,34 +7,37 @@ class BrowserActions:
         if browser not in browser_list:
             raise ValueError(f"Browser {browser} is not supported. Supported browsers are: {browser_list}")
         self.browser_type = browser
-        self.playwright = sync_playwright().start()
-        self.browser = self.playwright[self.browser_type].launch()
+        self.playwright = None
+        self.browser = None
 
-    def __del__(self):
-        # Clean up the browser instance
-        self.browser.close()
-        self.playwright.stop()
+    async def start(self):
+        self.playwright = await async_playwright().start()
+        self.browser = await self.playwright[self.browser_type].launch()
 
-    def take_screenshot(self, url: str, device: str = None, color_scheme: str = "light", full_page: bool = True, locator: str = None) -> str:
-        with self.browser.new_context(**(self.browser.devices[device] if device else {})) as context:
-            page = context.new_page(color_scheme=color_scheme)
-            page.goto(url)
-            image_data = page.locator(locator).screenshot() if locator else page.screenshot(full_page=full_page)
+    async def close(self):
+        if self.browser:
+            await self.browser.close()
+        if self.playwright:
+            await self.playwright.stop()
+
+    async def take_screenshot(self, url: str, device: str = None, color_scheme: str = "light", full_page: bool = True, locator: str = None) -> str:
+        async with self.browser.new_context(**(self.playwright.devices[device] if device else {})) as context:
+            page = await context.new_page()
+            await page.goto(url)
+            image_data = await page.locator(locator).screenshot() if locator else await page.screenshot(full_page=full_page)
             return base64.b64encode(image_data).decode()
 
-    def generate_pdf(self, url: str, format: str = "A4"):
-        with self.browser.new_context() as context:
-            page = context.new_page()
-            page.goto(url)
-            page.emulate_media()  # Optional, for print layout
-            pdf_data = page.pdf(format=format)
+    async def generate_pdf(self, url: str, format: str = "A4"):
+        async with self.browser.new_context() as context:
+            page = await context.new_page()
+            await page.goto(url)
+            await page.emulate_media()  # Optional, for print layout
+            pdf_data = await page.pdf(format=format)
             return pdf_data
 
-    def scrape_data(self, url: str, locator: str = None, user_agent: str = None):
-        with self.browser.new_context(user_agent=user_agent if not user_agent is None else None) as context:
-            page = context.new_page()
-            page.goto(url)
-            data = page.locator(locator).evaluate("element => element.outerHTML") if locator else page.content()
+    async def scrape_data(self, url: str, locator: str = None, user_agent: str = None):
+        async with self.browser.new_context(user_agent=user_agent if user_agent else None) as context:
+            page = await context.new_page()
+            await page.goto(url)
+            data = await page.locator(locator).evaluate("element => element.outerHTML") if locator else await page.content()
             return data
-
-    
