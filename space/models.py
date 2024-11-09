@@ -6,7 +6,7 @@ from constants import device_list, browser_list, pdf_format_list
 
 class ScreenshotRequest(BaseModel):
     url: HttpUrl = Field(..., description="The URL of the website to take a screenshot of")
-    browser: Optional[Literal["chromium", "firefox", "webkit"]] = Field(None, description="The browser to use for the screenshot (e.g. 'chromium', 'firefox', 'webkit')", example="chromium")
+    # browser: Optional[Literal["chromium", "firefox", "webkit"]] = Field(None, description="The browser to use for the screenshot (e.g. 'chromium', 'firefox', 'webkit')", example="chromium")
     device: Optional[str] = Field(None, description="The device to use for the screenshot (e.g. 'iPhone 12 Pro Max', 'Samsung Galaxy S21')", example="desktop")
     full_page: Optional[bool] = Field(True, description="Whether to take a full-page screenshot", example=False)
     color_scheme: Optional[Literal["dark", "light"]] = Field("light", description="The color scheme to use for the screenshot (e.g. 'dark', 'light')", example="dark")
