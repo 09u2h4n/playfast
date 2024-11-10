@@ -1,56 +1,95 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response, status
 from models import *
-from tools import measure_time
+from tools import measure_time, dummy_function
 from BrowserActions import BrowserActions
 
-app = FastAPI(docs_url="/")
+app = FastAPI(
+    title="SwarmUI Browser Automation API",
+    description="API for browser automation tasks including screenshots, PDF generation, and web scraping",
+    version="1.0.0",
+    docs_url="/"
+)
 
-@app.post("/screenshot")
+browser_actions = BrowserActions()
+
+@app.get("/health", tags=["System"])
+def health():
+    """Check if the API is running."""
+    return {"status": "healthy", "version": "1.0.0"}
+
+@app.post("/screenshot", 
+         response_model=ScreenshotResponse,
+         tags=["Browser Actions"])
 @measure_time()
-def take_screenshot(request: ScreenshotRequest):
+def screenshot(request: ScreenshotRequest):
+    """Take a screenshot of the specified webpage."""
     try:
-        browser_action = BrowserActions(request.browser or "chromium")
-        screenshot_data = browser_action.take_screenshot(
-            url=request.url,
-            device=request.device,
-            color_scheme=request.color_scheme,
-            full_page=request.full_page,
-            locator=request.locator
+        data = browser_actions.take_screenshot(data=request)
+        return ScreenshotResponse(image_data=data).dict()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
-        return ScreenshotResponse(image_data=screenshot_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/pdf")
+@app.post("/pdf",
+         response_model=PdfResponse,
+         tags=["Browser Actions"])
 @measure_time()
-def generate_pdf(request: PdfRequest):
+def pdf(request: PdfRequest):
+    """Generate a PDF of the specified webpage."""
     try:
-        browser_action = BrowserActions("chromium")
-        pdf_data = browser_action.generate_pdf(url=request.url, format=request.format)
-        return PdfResponse(pdf_data=pdf_data)
+        data = browser_actions.generate_pdf(data=request)
+        return PdfResponse(pdf_data=data).dict()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/scrape")
-@measure_time()
-def scrape_data(request: ScrapeRequests):
-    try:
-        browser_action = BrowserActions("chromium")
-        scraped_data = browser_action.scrape_data(
-            url=request.url,
-            locator=request.locator,
-            user_agent=request.user_agent
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
-        return ScrapeResponse(data=scraped_data)
+
+@app.post("/scrape",
+         response_model=ScrapeResponse,
+         tags=["Browser Actions"])
+@measure_time()
+def scrape(request: ScrapeRequest):
+    """Scrape content from the specified webpage."""
+    try:
+        data = browser_actions.scrape_content(data=request)
+        return ScrapeResponse(data=data).dict()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@app.get("/devices")
+@app.get("/devices",
+        response_model=DeviceListResponse,
+        tags=["Configuration"])
 @measure_time()
-def get_devices():
-    return DeviceListResponse(devices=device_list)
+def devices():
+    """Get list of available device configurations."""
+    try:
+        return DeviceListResponse(devices=device_list).dict()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@app.get("/browsers")
+@app.get("/browsers",
+        response_model=BrowserListResponse,
+        tags=["Configuration"])
 @measure_time()
-def get_browsers():
-    return BrowserListResponse(browsers=browser_list)
+def browsers():
+    """Get list of available browser configurations."""
+    try:
+        return BrowserListResponse(browsers=browser_list).dict()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

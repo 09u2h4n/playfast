@@ -11,6 +11,6 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-COPY --chown=user app.py models.py browser_actions.py tools.py .
+COPY --chown=user ./app.py ./BrowserActions.py ./constants.py ./models.py ./tools.py .
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
